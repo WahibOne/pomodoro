@@ -8,103 +8,253 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/135/135763.png">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            min-height: 100vh; margin: 0; background-color: #ff6b6b; color: white; 
-            overflow: hidden;
+        :root {
+            --bg-color: #101015;
+            --text-color: #ffffff;
+            --btn-bg: rgba(40, 40, 45, 0.8);
         }
-        h1 { margin-top: 0; }
-        #timer { font-size: 6rem; font-weight: bold; margin: 20px 0; font-variant-numeric: tabular-nums; }
-        button { 
-            padding: 15px 40px; font-size: 1.2rem; border: none; border-radius: 25px; 
-            background: white; color: #ff6b6b; cursor: pointer; font-weight: bold; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        button:active { transform: scale(0.95); }
         
-        /* Animation des tomates */
-        #tomato-basket {
-            margin-top: 40px;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            max-width: 80%;
-            min-height: 50px;
+        * { user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
+
+        body { 
+            font-family: 'Varela Round', -apple-system, sans-serif; 
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
+            height: 100vh; margin: 0; padding-top: 15vh;
+            background-color: var(--bg-color); color: var(--text-color); 
+            overflow: hidden; transition: background-color 0.8s ease;
         }
-        .tomato {
-            font-size: 2.5rem;
-            opacity: 0;
-            transform: scale(0);
-            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+
+        #timer { 
+            font-size: 7.5rem; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -2px;
+            transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); transform: translateY(0) scale(1); z-index: 10;
         }
-        @keyframes popIn {
-            0% { transform: scale(0) rotate(-15deg); opacity: 0; }
-            50% { transform: scale(1.3) rotate(10deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        body.is-focusing #timer { transform: translateY(20vh) scale(0.75); }
+
+        #home-ui {
+            display: flex; flex-direction: column; align-items: center;
+            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; top: 32vh; z-index: 9;
         }
+        body.is-focusing #home-ui { opacity: 0; pointer-events: none; }
+
+        #focus-tag { font-size: 1.2rem; opacity: 0.8; margin-bottom: 25vh; }
+
+        #startBtn { 
+            padding: 18px 45px; font-size: 1.3rem; border: none; font-family: inherit; border-radius: 40px; 
+            background: var(--btn-bg); color: var(--text-color); cursor: pointer; font-weight: 500;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.2s;
+        }
+        #startBtn:active { transform: scale(0.95); background: rgba(60, 60, 65, 0.9); }
+
+        /* Le conteneur du moteur physique */
+        #world-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+        }
+
+        /* L'enveloppe visuelle de la tomate (séparée de la physique) */
+        .tomato-inner {
+            width: 100%; height: 100%;
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
+        }
+        .tomato-inner.popping { transform: scale(0); opacity: 0; }
+        .tomato-inner.popped { transform: scale(1); opacity: 1; }
+
+        #hold-container {
+            position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.8s ease; z-index: 10;
+        }
+        body.is-focusing #hold-container { opacity: 1; }
+        #hold-text { font-size: 1rem; opacity: 0.6; margin-bottom: 12px; font-weight: 500; color: white; }
+        #progress-bg { width: 150px; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: white; border-radius: 3px; }
+        .filling #progress-bar { width: 100%; transition: width 3s linear; }
+        .resetting #progress-bar { width: 0%; transition: width 0.3s ease-out; }
+
+        #touch-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; display: none; }
+        body.is-focusing #touch-layer { display: block; }
     </style>
 </head>
 <body>
-    <h1>Focus</h1>
-    <div id="timer">25:00</div>
-    <button id="startBtn" onclick="toggleTimer()">Démarrer</button>
-    
-    <div id="tomato-basket"></div>
+
+    <div id="timer">00:05</div>
+
+    <div id="home-ui">
+        <div id="focus-tag">Focus ›</div>
+        <button id="startBtn" onclick="startFocus()">Start Focus</button>
+    </div>
+
+    <div id="world-container"></div>
+
+    <div id="hold-container">
+        <div id="hold-text">Hold to stop focus</div>
+        <div id="progress-bg"><div id="progress-bar"></div></div>
+    </div>
+    <div id="touch-layer"></div>
 
     <script>
-        // Le temps est réglé sur 25 minutes. 
-        // Astuce : pour tester l'animation tout de suite, remplace "25 * 60" par "5" (5 secondes)
-        let timeLeft = 25 * 60; 
+        // RÉGLÉ SUR 5 SECONDES POUR LE TEST (Remettre à 25 * 60 plus tard)
+        const TOTAL_TIME = 5; 
+        let timeLeft = TOTAL_TIME; 
         let timerId = null;
         const timerDisplay = document.getElementById('timer');
-        const btn = document.getElementById('startBtn');
-        const basket = document.getElementById('tomato-basket');
 
+        // --- MOTEUR PHYSIQUE MATTER.JS ---
+        const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+        const engine = Engine.create({ gravity: { x: 0, y: 1.5 } }); 
+        const world = engine.world;
+        const runner = Runner.create();
+        const container = document.getElementById('world-container');
+        const worldWidth = window.innerWidth;
+        const worldHeight = window.innerHeight;
+
+        // Murs invisibles
+        const wallOptions = { isStatic: true, render: { visible: false } };
+        Composite.add(world, [
+            Bodies.rectangle(worldWidth/2, worldHeight + 25, worldWidth, 50, wallOptions),
+            Bodies.rectangle(-25, worldHeight/2, 50, worldHeight, wallOptions),
+            Bodies.rectangle(worldWidth + 25, worldHeight/2, 50, worldHeight, wallOptions)
+        ]);
+
+        // Bouton Obstacle (Mise à jour plus précise de la position)
+        const startBtn = document.getElementById('startBtn');
+        let btnBody = null;
+        
+        // On attend un instant que la page charge pour prendre les bonnes dimensions
+        setTimeout(() => {
+            const rect = startBtn.getBoundingClientRect();
+            btnBody = Bodies.rectangle(
+                rect.left + rect.width / 2, 
+                rect.top + rect.height / 2, 
+                rect.width + 20, 
+                rect.height + 20, 
+                { isStatic: true, render: { visible: false } }
+            );
+            Composite.add(world, btnBody);
+        }, 100);
+
+        Runner.run(runner, engine);
+
+        let tomatoBodies = [];
+        const happyFace = `<path d="M15,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0 M29,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0" fill="white"/><path d="M20,29 q5,5 10,0" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+        const neutralFace = `<path d="M15,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0 M29,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0" fill="black" opacity="0.6"/><path d="M22,31 h6" stroke="black" stroke-width="2" opacity="0.6" stroke-linecap="round"/>`;
+
+        function spawnTomato() {
+            const size = 50;
+            const x = Math.random() * (worldWidth - 80) + 40;
+            const y = -60; // Fait tomber la tomate de plus haut
+            const tomatoType = Math.random() > 0.4 ? 'happy' : 'neutral';
+
+            // Le corps physique (Matter.js)
+            const body = Bodies.circle(x, y, 22, {
+                restitution: 0.4, // Moins rebondissant pour s'empiler
+                friction: 0.1,
+                density: 0.005
+            });
+
+            // L'enveloppe HTML
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.width = '50px';
+            div.style.height = '50px';
+            div.style.marginLeft = '-25px'; // Centre le point de pivot
+            div.style.marginTop = '-25px';
+
+            const color = tomatoType === 'happy' ? '#fe5b33' : '#fedb33';
+            const face = tomatoType === 'happy' ? happyFace : neutralFace;
+
+            // L'image qui va grossir (CSS)
+            div.innerHTML = `
+                <div class="tomato-inner popping">
+                    <svg viewBox="0 0 50 50" width="100%" height="100%">
+                        <circle cx="25" cy="27" r="21" fill="${color}" />
+                        <path d="M25 8 C 15 5, 12 18, 25 18 C 38 18, 35 5, 25 8 Z" fill="#34c759" />
+                        <path d="M25 10 Q 28 3 33 3" stroke="#28a745" stroke-width="2" stroke-linecap="round" fill="none"/>
+                        ${face}
+                    </svg>
+                </div>
+            `;
+            container.appendChild(div);
+
+            tomatoBodies.push({ body, element: div });
+            Composite.add(world, body);
+
+            // Déclenche l'animation de grossissement
+            const inner = div.querySelector('.tomato-inner');
+            setTimeout(() => inner.classList.replace('popping', 'popped'), 50);
+        }
+
+        // Boucle qui met à jour la position depuis le moteur physique
+        Events.on(engine, 'afterUpdate', () => {
+            tomatoBodies.forEach(item => {
+                const { position, angle } = item.body;
+                item.element.style.left = `${position.x}px`;
+                item.element.style.top = `${position.y}px`;
+                item.element.style.transform = `rotate(${angle}rad)`;
+            });
+        });
+
+        // --- GESTION DU MINUTEUR ---
         function updateDisplay() {
             const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
             const s = (timeLeft % 60).toString().padStart(2, '0');
             timerDisplay.textContent = `${m}:${s}`;
         }
 
-        function toggleTimer() {
-            if (timerId) {
-                // Mise en pause
-                clearInterval(timerId);
-                timerId = null;
-                btn.textContent = 'Reprendre';
-            } else {
-                // Démarrage
-                btn.textContent = 'Pause';
-                timerId = setInterval(() => {
-                    timeLeft--;
-                    updateDisplay();
-                    
-                    if (timeLeft <= 0) {
-                        clearInterval(timerId);
-                        timerId = null;
-                        
-                        // Création de la tomate animée
-                        const newTomato = document.createElement('div');
-                        newTomato.className = 'tomato';
-                        newTomato.textContent = '🍅';
-                        basket.appendChild(newTomato);
+        function startFocus() {
+            document.body.classList.add('is-focusing');
+            if (btnBody) Composite.remove(world, btnBody);
 
-                        // Réinitialisation du minuteur
-                        timeLeft = 25 * 60;
-                        btn.textContent = 'Démarrer';
-                        updateDisplay();
-                    }
-                }, 1000);
-            }
+            timerId = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) endFocus(true);
+            }, 1000);
         }
 
-        // Activation du Service Worker pour l'installation sur iPhone
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        function endFocus(success) {
+            clearInterval(timerId);
+            timerId = null;
+            document.body.classList.remove('is-focusing');
+            if (btnBody) Composite.add(world, btnBody);
+
+            if (success) spawnTomato();
+            timeLeft = TOTAL_TIME;
+            updateDisplay();
         }
+
+        // --- GESTION DU MAINTIEN (LONG PRESS) ---
+        const holdContainer = document.getElementById('hold-container');
+        const touchLayer = document.getElementById('touch-layer');
+        let holdTimerId = null;
+
+        function startHolding(e) {
+            e.preventDefault();
+            holdContainer.classList.remove('resetting'); holdContainer.classList.add('filling');
+            holdTimerId = setTimeout(() => {
+                holdContainer.classList.remove('filling'); holdContainer.classList.add('resetting');
+                endFocus(false);
+            }, 3000);
+        }
+
+        function stopHolding(e) {
+            e.preventDefault();
+            if (holdTimerId) { clearTimeout(holdTimerId); holdTimerId = null; }
+            holdContainer.classList.remove('filling'); holdContainer.classList.add('resetting');
+        }
+
+        touchLayer.addEventListener('touchstart', startHolding, { passive: false });
+        touchLayer.addEventListener('touchend', stopHolding, { passive: false });
+        touchLayer.addEventListener('touchcancel', stopHolding, { passive: false });
+        touchLayer.addEventListener('mousedown', startHolding);
+        touchLayer.addEventListener('mouseup', stopHolding);
+        touchLayer.addEventListener('mouseleave', stopHolding);
+
+        updateDisplay();
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
