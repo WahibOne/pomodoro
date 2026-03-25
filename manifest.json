@@ -1,0 +1,15 @@
+{
+  "name": "Mon Pomo",
+  "short_name": "Pomo",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ff6b6b",
+  "theme_color": "#ff6b6b",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/135/135763.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
