@@ -14,9 +14,9 @@
 
     <style>
         :root {
-            --bg-color: #101015;
+            --bg-color: #1a1e26;
             --text-color: #ffffff;
-            --btn-bg: rgba(40, 40, 45, 0.8);
+            --btn-bg: rgba(255, 255, 255, 0.1);
         }
         
         * { user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
@@ -29,25 +29,14 @@
             overflow: hidden; transition: background-color 0.8s ease;
         }
 
-        /* Minuteur avec indication qu'il est manipulable */
-        #timer-wrapper {
-            display: flex; flex-direction: column; align-items: center; z-index: 10;
-        }
-        
+        /* --- ÉCRAN PRINCIPAL --- */
         #timer { 
             font-size: 7.5rem; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -2px;
-            cursor: grab; touch-action: none; /* Empêche le scroll natif de la page */
-            transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+            cursor: pointer; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1); z-index: 10;
         }
-        #timer:active { cursor: grabbing; }
+        #timer:active { transform: scale(0.95); opacity: 0.8; }
         
-        #timer-hint {
-            font-size: 0.9rem; opacity: 0.5; margin-top: -10px;
-            transition: opacity 0.3s;
-        }
-
         body.is-focusing #timer { transform: translateY(20vh) scale(0.75); pointer-events: none; }
-        body.is-focusing #timer-hint { opacity: 0; pointer-events: none; }
 
         #home-ui {
             display: flex; flex-direction: column; align-items: center;
@@ -56,13 +45,12 @@
         body.is-focusing #home-ui { opacity: 0; pointer-events: none; }
 
         #startBtn { 
-            padding: 18px 45px; font-size: 1.3rem; border: none; font-family: inherit; border-radius: 40px; 
+            padding: 18px 45px; font-size: 1.3rem; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; border-radius: 40px; 
             background: var(--btn-bg); color: var(--text-color); cursor: pointer; font-weight: 500;
-            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.2s;
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: all 0.2s;
         }
-        #startBtn:active { transform: scale(0.95); background: rgba(60, 60, 65, 0.9); }
+        #startBtn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.2); }
 
-        /* Bouton Skip */
         #skipBtn {
             position: absolute; top: 40px; right: 20px;
             padding: 10px 20px; font-size: 1rem; font-family: inherit;
@@ -73,15 +61,44 @@
         #skipBtn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
         body.is-focusing #skipBtn { opacity: 1; pointer-events: auto; }
 
-        /* Le conteneur du moteur physique */
-        #world-container {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+        /* --- ÉCRAN DE PARAMÉTRAGE DU TEMPS --- */
+        #settings-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color);
+            z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        body.is-setting-time #settings-overlay { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+        #preview-tomato-wrapper { height: 120px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 60px; }
+        #preview-tomato { width: 50px; height: 50px; transition: width 0.1s, height 0.1s; }
+
+        .dial-container { width: 100%; height: 120px; position: relative; overflow: hidden; cursor: grab; touch-action: none; }
+        .dial-container:active { cursor: grabbing; }
+        .dial-strip { position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; }
+        
+        .tick-mark { position: absolute; width: 2px; background: rgba(255,255,255,0.15); border-radius: 1px; top: 50%; transform: translateY(-50%); }
+        .tick-mark.minor { height: 15px; }
+        .tick-mark.major { height: 30px; }
+        
+        .tick-num { 
+            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); 
+            font-size: 1.5rem; color: #535865; font-weight: 600; transition: all 0.2s ease;
         }
 
-        .tomato-inner {
-            width: 100%; height: 100%;
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
+        /* Curseur central (Pill + Triangle) */
+        .dial-pointer { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .dial-pill { width: 6px; height: 40px; background: white; border-radius: 3px; margin-bottom: 12px; }
+        .dial-triangle { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 10px solid white; }
+
+        #doneBtn { 
+            margin-top: 80px; padding: 18px 50px; font-size: 1.1rem; font-family: inherit; font-weight: bold;
+            background: white; color: black; border: none; border-radius: 30px; cursor: pointer; transition: transform 0.2s;
         }
+        #doneBtn:active { transform: scale(0.95); }
+
+        /* --- MOTEUR PHYSIQUE --- */
+        #world-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .tomato-inner { width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s; }
         .tomato-inner.popping { transform: scale(0); opacity: 0; }
         .tomato-inner.popped { transform: scale(1); opacity: 1; }
 
@@ -93,7 +110,7 @@
         #hold-text { font-size: 1rem; opacity: 0.6; margin-bottom: 12px; font-weight: 500; color: white; }
         #progress-bg { width: 150px; height: 6px; background: rgba(255, 255, 255, 0.2); border-radius: 3px; overflow: hidden; }
         #progress-bar { width: 0%; height: 100%; background: white; border-radius: 3px; }
-        .filling #progress-bar { width: 100%; transition: width 3s linear; }
+        .filling #progress-bar { width: 100%; transition: width 1s linear; }
         .resetting #progress-bar { width: 0%; transition: width 0.3s ease-out; }
 
         #touch-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; display: none; }
@@ -104,13 +121,35 @@
 
     <button id="skipBtn" onclick="skipFocus()">Passer ⏭</button>
 
-    <div id="timer-wrapper">
-        <div id="timer">25:00</div>
-        <div id="timer-hint">↕ Glissez pour ajuster</div>
-    </div>
+    <div id="timer" onclick="openSettings()">25:00</div>
 
     <div id="home-ui">
         <button id="startBtn" onclick="startFocus()">Start Focus</button>
+    </div>
+
+    <div id="settings-overlay">
+        
+        <div id="preview-tomato-wrapper">
+            <div id="preview-tomato">
+                <svg viewBox="0 0 50 50" width="100%" height="100%">
+                    <ellipse cx="25" cy="27" rx="22" ry="19" fill="#f58d4a" />
+                    <path d="M 25 3 L 28 8 L 34 7 L 29 12 L 32 18 L 25 14 L 18 18 L 21 12 L 16 7 L 22 8 Z" fill="#5da349" />
+                    <circle cx="16" cy="27" r="1.5" fill="#2c2c2c"/>
+                    <circle cx="28" cy="27" r="1.5" fill="#2c2c2c"/>
+                    <path d="M20,31 Q22,34 24,31" stroke="#2c2c2c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="dial-container" id="dial-container">
+            <div class="dial-strip" id="dial-strip"></div>
+            <div class="dial-pointer">
+                <div class="dial-pill"></div>
+                <div class="dial-triangle"></div>
+            </div>
+        </div>
+
+        <button id="doneBtn" onclick="closeSettings()">Done</button>
     </div>
 
     <div id="world-container"></div>
@@ -122,55 +161,161 @@
     <div id="touch-layer"></div>
 
     <script>
-        let TOTAL_TIME = 25 * 60; // 25 minutes par défaut
+        let TOTAL_TIME = 25 * 60; 
         let timeLeft = TOTAL_TIME; 
         let timerId = null;
         const timerDisplay = document.getElementById('timer');
 
-        // --- GESTION DU SÉLECTEUR DE TEMPS (DRAG / SCROLL) ---
-        let isDraggingTime = false;
-        let startY = 0;
-        let startMinutes = 0;
+        function updateDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            timerDisplay.textContent = `${m}:${s}`;
+        }
 
-        timerDisplay.addEventListener('pointerdown', (e) => {
-            if (document.body.classList.contains('is-focusing')) return;
-            isDraggingTime = true;
-            startY = e.clientY;
-            startMinutes = Math.floor(TOTAL_TIME / 60);
-            
-            // On désactive la transition CSS pour l'animation fluide en temps réel
-            timerDisplay.style.transition = 'none'; 
-            timerDisplay.setPointerCapture(e.pointerId);
+        // --- GESTION DU NOUVEAU SÉLECTEUR (DIAL) ---
+        const PX_PER_MIN = 20; // Espacement de 20px par minute
+        const MIN_TIME_CAP = 5;
+        const MAX_TIME_CAP = 180; // Changé à 180 minutes
+        let dialCurrentX = 25 * PX_PER_MIN; // Valeur par défaut au démarrage
+        
+        const dialStrip = document.getElementById('dial-strip');
+        const previewTomato = document.getElementById('preview-tomato');
+
+        // Générer les graduations
+        function buildDial() {
+            let html = '';
+            // On génère de 0 à 200 pour avoir de la marge sur les bords (pour les 180min)
+            for(let i = 0; i <= 200; i++) {
+                const posX = i * PX_PER_MIN;
+                if(i >= MIN_TIME_CAP && i <= MAX_TIME_CAP) {
+                    if (i % 5 === 0) {
+                        html += `<div class="tick-mark major" id="tick-${i}" style="left: ${posX}px">
+                                    <div class="tick-num">${i}</div>
+                                 </div>`;
+                    } else {
+                        html += `<div class="tick-mark minor" style="left: ${posX}px"></div>`;
+                    }
+                }
+            }
+            dialStrip.innerHTML = html;
+        }
+        buildDial();
+
+        function updateDialVisuals() {
+            const centerOffset = window.innerWidth / 2;
+            dialStrip.style.transform = `translateX(${centerOffset - dialCurrentX}px)`;
+
+            let currentTime = dialCurrentX / PX_PER_MIN;
+
+            // Mettre en évidence le chiffre central
+            const majorTicks = document.querySelectorAll('.tick-mark.major');
+            majorTicks.forEach(tick => {
+                const val = parseInt(tick.id.replace('tick-', ''));
+                const dist = Math.abs(currentTime - val);
+                const numEl = tick.querySelector('.tick-num');
+                
+                if (dist < 2.5) { 
+                    const scale = 1 + (1 - (dist / 2.5)) * 0.8; // Grossit à l'approche du centre
+                    numEl.style.transform = `translate(-50%, 0) scale(${scale})`;
+                    numEl.style.color = 'white';
+                } else {
+                    numEl.style.transform = `translate(-50%, 0) scale(1)`;
+                    numEl.style.color = '#535865';
+                }
+            });
+
+            // Mettre à jour la taille de la tomate de prévisualisation
+            let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, currentTime));
+            let percent = (clampedTime - MIN_TIME_CAP) / (MAX_TIME_CAP - MIN_TIME_CAP);
+            const MIN_SIZE = 30;
+            const MAX_SIZE = 60;
+            let size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
+            previewTomato.style.width = `${size}px`;
+            previewTomato.style.height = `${size}px`;
+        }
+
+        // Logique de Drag et d'Inertie
+        const dialContainer = document.getElementById('dial-container');
+        let isDraggingDial = false;
+        let lastClientX = 0;
+        let velocityX = 0;
+        let lastTime = 0;
+        let animFrame;
+
+        dialContainer.addEventListener('pointerdown', (e) => {
+            isDraggingDial = true;
+            lastClientX = e.clientX;
+            velocityX = 0;
+            lastTime = performance.now();
+            cancelAnimationFrame(animFrame);
+            dialContainer.setPointerCapture(e.pointerId);
         });
 
-        timerDisplay.addEventListener('pointermove', (e) => {
-            if (!isDraggingTime) return;
-            const deltaY = startY - e.clientY;
+        dialContainer.addEventListener('pointermove', (e) => {
+            if (!isDraggingDial) return;
+            const now = performance.now();
+            const dt = Math.max(1, now - lastTime);
+            const deltaX = lastClientX - e.clientX; // Inversé pour le scroll naturel
             
-            // Un changement de minute tous les 15 pixels glissés
-            const minuteChange = Math.floor(deltaY / 15);
-            let newMinutes = startMinutes + minuteChange;
+            dialCurrentX += deltaX;
+            velocityX = deltaX / dt;
             
-            // On limite entre 1 minute et 120 minutes
-            newMinutes = Math.max(1, Math.min(120, newMinutes));
-            
-            TOTAL_TIME = newMinutes * 60;
+            lastClientX = e.clientX;
+            lastTime = now;
+            updateDialVisuals();
+        });
+
+        dialContainer.addEventListener('pointerup', () => {
+            if (!isDraggingDial) return;
+            isDraggingDial = false;
+            startInertia();
+        });
+
+        function startInertia() {
+            function tick() {
+                // Application de la vélocité et de la friction
+                dialCurrentX += velocityX * 16;
+                velocityX *= 0.92;
+
+                // Si la vitesse est très faible, on force le "Snap" (aimant) sur un multiple de 5
+                if (Math.abs(velocityX) < 0.2) {
+                    let currentTime = dialCurrentX / PX_PER_MIN;
+                    // Arrondir au multiple de 5 le plus proche (limité entre MIN_TIME_CAP et MAX_TIME_CAP)
+                    let targetTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, Math.round(currentTime / 5) * 5));
+                    let targetX = targetTime * PX_PER_MIN;
+
+                    // Force de ressort douce vers la cible
+                    dialCurrentX += (targetX - dialCurrentX) * 0.15;
+
+                    if (Math.abs(targetX - dialCurrentX) < 0.5) {
+                        dialCurrentX = targetX;
+                        updateDialVisuals();
+                        return; // Arrêt complet
+                    }
+                }
+                updateDialVisuals();
+                animFrame = requestAnimationFrame(tick);
+            }
+            animFrame = requestAnimationFrame(tick);
+        }
+
+        // Ouvrir / Fermer les paramètres
+        function openSettings() {
+            document.body.classList.add('is-setting-time');
+            // Synchronise la position de la règle avec le temps actuel
+            dialCurrentX = (TOTAL_TIME / 60) * PX_PER_MIN;
+            updateDialVisuals();
+        }
+
+        function closeSettings() {
+            document.body.classList.remove('is-setting-time');
+            // Récupère la valeur finale (arrondie)
+            let finalTime = Math.round((dialCurrentX / PX_PER_MIN) / 5) * 5;
+            TOTAL_TIME = finalTime * 60;
             timeLeft = TOTAL_TIME;
             updateDisplay();
-            
-            // Effet visuel "cadenas" : le texte se décale légèrement avant de changer de chiffre
-            const visualOffset = -(deltaY % 15);
-            timerDisplay.style.transform = `translateY(${visualOffset}px) scale(0.98)`;
-        });
+        }
 
-        timerDisplay.addEventListener('pointerup', (e) => {
-            if (!isDraggingTime) return;
-            isDraggingTime = false;
-            
-            // On retire le style en ligne pour laisser la classe CSS gérer le reste
-            timerDisplay.style.transform = '';
-            timerDisplay.style.transition = '';
-        });
 
         // --- MOTEUR PHYSIQUE MATTER.JS ---
         const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
@@ -183,10 +328,10 @@
 
         const wallOptions = { isStatic: true, render: { visible: false } };
         Composite.add(world, [
-            Bodies.rectangle(worldWidth/2, worldHeight + 25, worldWidth, 50, wallOptions), // Sol
-            Bodies.rectangle(-25, worldHeight/2, 50, worldHeight, wallOptions), // Gauche
-            Bodies.rectangle(worldWidth + 25, worldHeight/2, 50, worldHeight, wallOptions), // Droite
-            Bodies.rectangle(worldWidth/2, -25, worldWidth, 50, wallOptions) // Plafond
+            Bodies.rectangle(worldWidth/2, worldHeight + 25, worldWidth, 50, wallOptions),
+            Bodies.rectangle(-25, worldHeight/2, 50, worldHeight, wallOptions),
+            Bodies.rectangle(worldWidth + 25, worldHeight/2, 50, worldHeight, wallOptions),
+            Bodies.rectangle(worldWidth/2, -25, worldWidth, 50, wallOptions)
         ]);
 
         const startBtn = document.getElementById('startBtn');
@@ -199,7 +344,7 @@
                 rect.top + rect.height / 2, 
                 rect.width + 20, 
                 rect.height + 20, 
-                { isStatic: true, render: { visible: false } }
+                { isStatic: true, render: { visible: false }, isSensor: false }
             );
             Composite.add(world, btnBody);
         }, 100);
@@ -207,58 +352,59 @@
         Runner.run(runner, engine);
 
         let tomatoBodies = [];
-        const happyFace = `<path d="M15,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0 M29,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0" fill="white"/><path d="M20,29 q5,5 10,0" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>`;
-        const neutralFace = `<path d="M15,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0 M29,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0" fill="black" opacity="0.6"/><path d="M22,31 h6" stroke="black" stroke-width="2" opacity="0.6" stroke-linecap="round"/>`;
 
-        // --- GÉNÉRATION PROPORTIONNELLE DE LA TOMATE ---
-        function spawnTomato() {
+        const COLOR_ORANGE = '#f58d4a';
+        const COLOR_YELLOW = '#fbe064';
+        const COLOR_LEAF = '#5da349';
+        const COLOR_FACE = '#2c2c2c';
+
+        // Visages décalés vers la gauche (cx-3 et x-3 pour les tracés)
+        const happyFace = `
+            <circle cx="16" cy="27" r="1.5" fill="${COLOR_FACE}"/>
+            <circle cx="28" cy="27" r="1.5" fill="${COLOR_FACE}"/>
+            <path d="M20,31 Q22,36 24,31" stroke="${COLOR_FACE}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        `;
+        const sadFace = `
+            <circle cx="16" cy="27" r="1.5" fill="${COLOR_FACE}"/>
+            <circle cx="28" cy="27" r="1.5" fill="${COLOR_FACE}"/>
+            <path d="M20,34 Q22,30 24,33" stroke="${COLOR_FACE}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        `;
+
+        function spawnTomato(success) {
             const MIN_TIME = 60;    
-            const MAX_TIME = 3600;  
+            const MAX_TIME = 10800; // 180 min * 60s pour que l'échelle de taille de tomate suive les 180min
             const MIN_SIZE = 30;    
-            const MAX_SIZE = 120;   
+            const MAX_SIZE = 60;   
 
             const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
             const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
-
             const size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
 
-            const startHue = 50; 
-            const endHue = 0;    
-            const currentHue = startHue + percent * (endHue - startHue);
-            const color = `hsl(${currentHue}, 98%, 54%)`;
-
-            const face = percent > 0.3 ? happyFace : neutralFace;
+            const color = success ? COLOR_ORANGE : COLOR_YELLOW;
+            const face = success ? happyFace : sadFace;
 
             const x = Math.random() * (worldWidth - size * 2) + size;
             const y = 40; 
 
-            const physicalRadius = size * 0.44; 
+            const physicalRadius = size * 0.42; 
 
-            const body = Bodies.circle(x, y, physicalRadius, {
-                restitution: 0.4, 
-                friction: 0.1,
-                density: 0.005
-            });
+            const body = Bodies.circle(x, y, physicalRadius, { restitution: 0.3, friction: 0.2, density: 0.005 });
 
             const div = document.createElement('div');
             div.style.position = 'absolute';
-            div.style.width = `${size}px`;
-            div.style.height = `${size}px`;
-            div.style.marginLeft = `-${size / 2}px`; 
-            div.style.marginTop = `-${size / 2}px`;
+            div.style.width = `${size}px`; div.style.height = `${size}px`;
+            div.style.marginLeft = `-${size / 2}px`; div.style.marginTop = `-${size / 2}px`;
 
             div.innerHTML = `
                 <div class="tomato-inner popping">
                     <svg viewBox="0 0 50 50" width="100%" height="100%">
-                        <circle cx="25" cy="27" r="21" fill="${color}" />
-                        <path d="M25 8 C 15 5, 12 18, 25 18 C 38 18, 35 5, 25 8 Z" fill="#34c759" />
-                        <path d="M25 10 Q 28 3 33 3" stroke="#28a745" stroke-width="2" stroke-linecap="round" fill="none"/>
+                        <ellipse cx="25" cy="27" rx="22" ry="19" fill="${color}" />
+                        <path d="M 25 3 L 28 8 L 34 7 L 29 12 L 32 18 L 25 14 L 18 18 L 21 12 L 16 7 L 22 8 Z" fill="${COLOR_LEAF}" />
                         ${face}
                     </svg>
                 </div>
             `;
             container.appendChild(div);
-
             tomatoBodies.push({ body, element: div });
             Composite.add(world, body);
 
@@ -275,12 +421,9 @@
             });
         });
 
-        // --- GESTION DU GYROSCOPE ---
         let gyroActive = false;
-
         function initGyroscope() {
             if (gyroActive) return; 
-
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
                     .then(permissionState => {
@@ -288,8 +431,7 @@
                             window.addEventListener('deviceorientation', handleOrientation);
                             gyroActive = true;
                         }
-                    })
-                    .catch(console.error);
+                    }).catch(console.error);
             } else {
                 window.addEventListener('deviceorientation', handleOrientation);
                 gyroActive = true;
@@ -299,28 +441,15 @@
         function handleOrientation(event) {
             let x = event.gamma; 
             let y = event.beta;  
-
             if (x === null || y === null) return;
-
             const maxGravity = 1.5;
-            let gravityX = x / 30; 
-            let gravityY = y / 30;
-
-            engine.gravity.x = Math.max(-maxGravity, Math.min(maxGravity, gravityX));
-            engine.gravity.y = Math.max(-maxGravity, Math.min(maxGravity, gravityY));
-        }
-
-        // --- GESTION DU MINUTEUR ---
-        function updateDisplay() {
-            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-            const s = (timeLeft % 60).toString().padStart(2, '0');
-            timerDisplay.textContent = `${m}:${s}`;
+            engine.gravity.x = Math.max(-maxGravity, Math.min(maxGravity, x / 30));
+            engine.gravity.y = Math.max(-maxGravity, Math.min(maxGravity, y / 30));
         }
 
         function startFocus() {
             document.body.classList.add('is-focusing');
             if (btnBody) Composite.remove(world, btnBody);
-
             initGyroscope();
 
             timerId = setInterval(() => {
@@ -330,18 +459,14 @@
             }, 1000);
         }
 
-        // Fonction liée au bouton SKIP
         function skipFocus() {
             if (timerId) {
                 clearInterval(timerId);
                 timerId = null;
                 document.body.classList.remove('is-focusing');
                 if (btnBody) Composite.add(world, btnBody);
-
-                // Fait apparaître la tomate basée sur la durée choisie
-                spawnTomato(); 
                 
-                // Réinitialise le temps
+                spawnTomato(true); 
                 timeLeft = TOTAL_TIME;
                 updateDisplay();
             }
@@ -353,26 +478,23 @@
             document.body.classList.remove('is-focusing');
             if (btnBody) Composite.add(world, btnBody);
 
-            if (success) spawnTomato();
+            spawnTomato(success); 
             timeLeft = TOTAL_TIME;
             updateDisplay();
         }
 
-        // --- GESTION DU MAINTIEN (ANNULATION SANS SUCCÈS) ---
         const holdContainer = document.getElementById('hold-container');
         const touchLayer = document.getElementById('touch-layer');
         let holdTimerId = null;
 
         function startHolding(e) {
-            // Empêche le clic d'activer d'autres éléments
             if(e.target.id === 'skipBtn') return; 
-            
             e.preventDefault();
             holdContainer.classList.remove('resetting'); holdContainer.classList.add('filling');
             holdTimerId = setTimeout(() => {
                 holdContainer.classList.remove('filling'); holdContainer.classList.add('resetting');
-                endFocus(false); // false = annulation sans faire apparaître de tomate
-            }, 3000);
+                endFocus(false); 
+            }, 1000);
         }
 
         function stopHolding(e) {
@@ -390,7 +512,6 @@
         touchLayer.addEventListener('mouseleave', stopHolding);
 
         updateDisplay();
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
     </script>
 </body>
 </html>
