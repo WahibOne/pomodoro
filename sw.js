@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pomo-cache-v2'; // Change le nom de la version ici (v1 -> v2)
+const CACHE_NAME = 'pomo-cache-v2.1'; 
 const urlsToCache = [
   './',
   './index.html',
