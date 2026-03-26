@@ -29,19 +29,31 @@
             overflow: hidden; transition: background-color 0.8s ease;
         }
 
+        /* Minuteur avec indication qu'il est manipulable */
+        #timer-wrapper {
+            display: flex; flex-direction: column; align-items: center; z-index: 10;
+        }
+        
         #timer { 
             font-size: 7.5rem; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -2px;
-            transition: all 0.8s cubic-bezier(0.25, 1, 0.5, 1); transform: translateY(0) scale(1); z-index: 10;
+            cursor: grab; touch-action: none; /* Empêche le scroll natif de la page */
+            transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        body.is-focusing #timer { transform: translateY(20vh) scale(0.75); }
+        #timer:active { cursor: grabbing; }
+        
+        #timer-hint {
+            font-size: 0.9rem; opacity: 0.5; margin-top: -10px;
+            transition: opacity 0.3s;
+        }
+
+        body.is-focusing #timer { transform: translateY(20vh) scale(0.75); pointer-events: none; }
+        body.is-focusing #timer-hint { opacity: 0; pointer-events: none; }
 
         #home-ui {
             display: flex; flex-direction: column; align-items: center;
-            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; top: 32vh; z-index: 9;
+            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; top: 38vh; z-index: 9;
         }
         body.is-focusing #home-ui { opacity: 0; pointer-events: none; }
-
-        #focus-tag { font-size: 1.2rem; opacity: 0.8; margin-bottom: 25vh; }
 
         #startBtn { 
             padding: 18px 45px; font-size: 1.3rem; border: none; font-family: inherit; border-radius: 40px; 
@@ -50,12 +62,22 @@
         }
         #startBtn:active { transform: scale(0.95); background: rgba(60, 60, 65, 0.9); }
 
+        /* Bouton Skip */
+        #skipBtn {
+            position: absolute; top: 40px; right: 20px;
+            padding: 10px 20px; font-size: 1rem; font-family: inherit;
+            background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px; color: white; cursor: pointer;
+            opacity: 0; pointer-events: none; transition: opacity 0.5s, transform 0.2s; z-index: 20;
+        }
+        #skipBtn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
+        body.is-focusing #skipBtn { opacity: 1; pointer-events: auto; }
+
         /* Le conteneur du moteur physique */
         #world-container {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
         }
 
-        /* L'enveloppe visuelle de la tomate (séparée de la physique) */
         .tomato-inner {
             width: 100%; height: 100%;
             transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
@@ -80,27 +102,75 @@
 </head>
 <body>
 
-    <div id="timer">00:05</div>
+    <button id="skipBtn" onclick="skipFocus()">Passer ⏭</button>
+
+    <div id="timer-wrapper">
+        <div id="timer">25:00</div>
+        <div id="timer-hint">↕ Glissez pour ajuster</div>
+    </div>
 
     <div id="home-ui">
-        <div id="focus-tag">Focus ›</div>
         <button id="startBtn" onclick="startFocus()">Start Focus</button>
     </div>
 
     <div id="world-container"></div>
 
     <div id="hold-container">
-        <div id="hold-text">Hold to stop focus</div>
+        <div id="hold-text">Maintenez pour annuler</div>
         <div id="progress-bg"><div id="progress-bar"></div></div>
     </div>
     <div id="touch-layer"></div>
 
     <script>
-        // RÉGLÉ SUR 5 SECONDES POUR LE TEST (Remettre à 25 * 60 plus tard)
-        const TOTAL_TIME = 5; 
+        let TOTAL_TIME = 25 * 60; // 25 minutes par défaut
         let timeLeft = TOTAL_TIME; 
         let timerId = null;
         const timerDisplay = document.getElementById('timer');
+
+        // --- GESTION DU SÉLECTEUR DE TEMPS (DRAG / SCROLL) ---
+        let isDraggingTime = false;
+        let startY = 0;
+        let startMinutes = 0;
+
+        timerDisplay.addEventListener('pointerdown', (e) => {
+            if (document.body.classList.contains('is-focusing')) return;
+            isDraggingTime = true;
+            startY = e.clientY;
+            startMinutes = Math.floor(TOTAL_TIME / 60);
+            
+            // On désactive la transition CSS pour l'animation fluide en temps réel
+            timerDisplay.style.transition = 'none'; 
+            timerDisplay.setPointerCapture(e.pointerId);
+        });
+
+        timerDisplay.addEventListener('pointermove', (e) => {
+            if (!isDraggingTime) return;
+            const deltaY = startY - e.clientY;
+            
+            // Un changement de minute tous les 15 pixels glissés
+            const minuteChange = Math.floor(deltaY / 15);
+            let newMinutes = startMinutes + minuteChange;
+            
+            // On limite entre 1 minute et 120 minutes
+            newMinutes = Math.max(1, Math.min(120, newMinutes));
+            
+            TOTAL_TIME = newMinutes * 60;
+            timeLeft = TOTAL_TIME;
+            updateDisplay();
+            
+            // Effet visuel "cadenas" : le texte se décale légèrement avant de changer de chiffre
+            const visualOffset = -(deltaY % 15);
+            timerDisplay.style.transform = `translateY(${visualOffset}px) scale(0.98)`;
+        });
+
+        timerDisplay.addEventListener('pointerup', (e) => {
+            if (!isDraggingTime) return;
+            isDraggingTime = false;
+            
+            // On retire le style en ligne pour laisser la classe CSS gérer le reste
+            timerDisplay.style.transform = '';
+            timerDisplay.style.transition = '';
+        });
 
         // --- MOTEUR PHYSIQUE MATTER.JS ---
         const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
@@ -111,7 +181,6 @@
         const worldWidth = window.innerWidth;
         const worldHeight = window.innerHeight;
 
-        // Murs invisibles (Sol, Gauche, Droite, Plafond)
         const wallOptions = { isStatic: true, render: { visible: false } };
         Composite.add(world, [
             Bodies.rectangle(worldWidth/2, worldHeight + 25, worldWidth, 50, wallOptions), // Sol
@@ -120,11 +189,9 @@
             Bodies.rectangle(worldWidth/2, -25, worldWidth, 50, wallOptions) // Plafond
         ]);
 
-        // Bouton Obstacle (Mise à jour plus précise de la position)
         const startBtn = document.getElementById('startBtn');
         let btnBody = null;
         
-        // On attend un instant que la page charge pour prendre les bonnes dimensions
         setTimeout(() => {
             const rect = startBtn.getBoundingClientRect();
             btnBody = Bodies.rectangle(
@@ -143,31 +210,43 @@
         const happyFace = `<path d="M15,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0 M29,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0" fill="white"/><path d="M20,29 q5,5 10,0" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>`;
         const neutralFace = `<path d="M15,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0 M29,20 a3,3 0 0,0 6,0 a3,3 0 0,0 -6,0" fill="black" opacity="0.6"/><path d="M22,31 h6" stroke="black" stroke-width="2" opacity="0.6" stroke-linecap="round"/>`;
 
+        // --- GÉNÉRATION PROPORTIONNELLE DE LA TOMATE ---
         function spawnTomato() {
-            const size = 50;
-            const x = Math.random() * (worldWidth - 80) + 40;
-            const y = 40; // Fait tomber la tomate de plus haut
-            const tomatoType = Math.random() > 0.4 ? 'happy' : 'neutral';
+            const MIN_TIME = 60;    
+            const MAX_TIME = 3600;  
+            const MIN_SIZE = 30;    
+            const MAX_SIZE = 120;   
 
-            // Le corps physique (Matter.js)
-            const body = Bodies.circle(x, y, 22, {
-                restitution: 0.4, // Moins rebondissant pour s'empiler
+            const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
+            const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
+
+            const size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
+
+            const startHue = 50; 
+            const endHue = 0;    
+            const currentHue = startHue + percent * (endHue - startHue);
+            const color = `hsl(${currentHue}, 98%, 54%)`;
+
+            const face = percent > 0.3 ? happyFace : neutralFace;
+
+            const x = Math.random() * (worldWidth - size * 2) + size;
+            const y = 40; 
+
+            const physicalRadius = size * 0.44; 
+
+            const body = Bodies.circle(x, y, physicalRadius, {
+                restitution: 0.4, 
                 friction: 0.1,
                 density: 0.005
             });
 
-            // L'enveloppe HTML
             const div = document.createElement('div');
             div.style.position = 'absolute';
-            div.style.width = '50px';
-            div.style.height = '50px';
-            div.style.marginLeft = '-25px'; // Centre le point de pivot
-            div.style.marginTop = '-25px';
+            div.style.width = `${size}px`;
+            div.style.height = `${size}px`;
+            div.style.marginLeft = `-${size / 2}px`; 
+            div.style.marginTop = `-${size / 2}px`;
 
-            const color = tomatoType === 'happy' ? '#fe5b33' : '#fedb33';
-            const face = tomatoType === 'happy' ? happyFace : neutralFace;
-
-            // L'image qui va grossir (CSS)
             div.innerHTML = `
                 <div class="tomato-inner popping">
                     <svg viewBox="0 0 50 50" width="100%" height="100%">
@@ -183,12 +262,10 @@
             tomatoBodies.push({ body, element: div });
             Composite.add(world, body);
 
-            // Déclenche l'animation de grossissement
             const inner = div.querySelector('.tomato-inner');
             setTimeout(() => inner.classList.replace('popping', 'popped'), 50);
         }
 
-        // Boucle qui met à jour la position depuis le moteur physique
         Events.on(engine, 'afterUpdate', () => {
             tomatoBodies.forEach(item => {
                 const { position, angle } = item.body;
@@ -202,7 +279,7 @@
         let gyroActive = false;
 
         function initGyroscope() {
-            if (gyroActive) return; // Évite de demander plusieurs fois
+            if (gyroActive) return; 
 
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission()
@@ -220,8 +297,8 @@
         }
 
         function handleOrientation(event) {
-            let x = event.gamma; // Inclinaison gauche/droite
-            let y = event.beta;  // Inclinaison avant/arrière
+            let x = event.gamma; 
+            let y = event.beta;  
 
             if (x === null || y === null) return;
 
@@ -244,7 +321,6 @@
             document.body.classList.add('is-focusing');
             if (btnBody) Composite.remove(world, btnBody);
 
-            // Initialiser le gyroscope au moment du clic
             initGyroscope();
 
             timerId = setInterval(() => {
@@ -252,6 +328,23 @@
                 updateDisplay();
                 if (timeLeft <= 0) endFocus(true);
             }, 1000);
+        }
+
+        // Fonction liée au bouton SKIP
+        function skipFocus() {
+            if (timerId) {
+                clearInterval(timerId);
+                timerId = null;
+                document.body.classList.remove('is-focusing');
+                if (btnBody) Composite.add(world, btnBody);
+
+                // Fait apparaître la tomate basée sur la durée choisie
+                spawnTomato(); 
+                
+                // Réinitialise le temps
+                timeLeft = TOTAL_TIME;
+                updateDisplay();
+            }
         }
 
         function endFocus(success) {
@@ -265,21 +358,25 @@
             updateDisplay();
         }
 
-        // --- GESTION DU MAINTIEN (LONG PRESS) ---
+        // --- GESTION DU MAINTIEN (ANNULATION SANS SUCCÈS) ---
         const holdContainer = document.getElementById('hold-container');
         const touchLayer = document.getElementById('touch-layer');
         let holdTimerId = null;
 
         function startHolding(e) {
+            // Empêche le clic d'activer d'autres éléments
+            if(e.target.id === 'skipBtn') return; 
+            
             e.preventDefault();
             holdContainer.classList.remove('resetting'); holdContainer.classList.add('filling');
             holdTimerId = setTimeout(() => {
                 holdContainer.classList.remove('filling'); holdContainer.classList.add('resetting');
-                endFocus(false);
+                endFocus(false); // false = annulation sans faire apparaître de tomate
             }, 3000);
         }
 
         function stopHolding(e) {
+            if(e.target.id === 'skipBtn') return;
             e.preventDefault();
             if (holdTimerId) { clearTimeout(holdTimerId); holdTimerId = null; }
             holdContainer.classList.remove('filling'); holdContainer.classList.add('resetting');
