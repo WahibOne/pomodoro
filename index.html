@@ -124,10 +124,7 @@
     </style>
 </head>
 <body>
-    <button onclick="alert('Vibration supportée : ' + !!navigator.vibrate); navigator.vibrate(200);" 
-            style="position:fixed; top:10px; left:10px; z-index:9999; padding:20px; background:white; color:black;">
-        TEST VIBRATION
-    </button>
+
     <button id="skipBtn" onclick="skipFocus()">Passer ⏭</button>
 
     <div id="timer" onclick="openSettings()">25:00</div>
@@ -210,29 +207,13 @@
         }
         buildDial();
 
-        // --- AJOUT : Variable pour suivre le dernier "tick" de vibration ---
-        let lastVibratedMinute = -1;
-
         function updateDialVisuals() {
             const centerOffset = window.innerWidth / 2;
             dialStrip.style.transform = `translateX(${centerOffset - dialCurrentX}px)`;
 
             let currentTime = dialCurrentX / PX_PER_MIN;
-            
-            // --- AJOUT : Logique de vibration ---
-            // On arrondit pour savoir sur quelle graduation on se trouve
-            let roundedMinute = Math.round(currentTime);
-            
-            // Si on change de graduation et qu'on est dans les limites
-            if (roundedMinute !== lastVibratedMinute && roundedMinute >= MIN_TIME_CAP && roundedMinute <= MAX_TIME_CAP) {
-                // Une vibration de 10ms est très légère, idéale pour un effet de "tick"
-                if (navigator.vibrate) {
-                    navigator.vibrate(10); 
-                }
-                lastVibratedMinute = roundedMinute;
-            }
 
-            // --- Reste de ton code (mise en évidence du chiffre et taille tomate) ---
+            // Mettre en évidence le chiffre central
             const majorTicks = document.querySelectorAll('.tick-mark.major');
             majorTicks.forEach(tick => {
                 const val = parseInt(tick.id.replace('tick-', ''));
@@ -240,7 +221,7 @@
                 const numEl = tick.querySelector('.tick-num');
                 
                 if (dist < 2.5) { 
-                    const scale = 1 + (1 - (dist / 2.5)) * 0.8;
+                    const scale = 1 + (1 - (dist / 2.5)) * 0.8; // Grossit à l'approche du centre
                     numEl.style.transform = `translate(-50%, 0) scale(${scale})`;
                     numEl.style.color = 'white';
                 } else {
@@ -249,10 +230,11 @@
                 }
             });
 
+            // Mettre à jour la taille de la tomate de prévisualisation
             let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, currentTime));
             let percent = (clampedTime - MIN_TIME_CAP) / (MAX_TIME_CAP - MIN_TIME_CAP);
-            const MIN_SIZE = 70;
-            const MAX_SIZE = 200;
+            const MIN_SIZE = 50;
+            const MAX_SIZE = 140;
             let size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
             previewTomato.style.width = `${size}px`;
             previewTomato.style.height = `${size}px`;
@@ -405,8 +387,8 @@
         function spawnTomato(success) {
             const MIN_TIME = 60;    
             const MAX_TIME = 10800; // 180 min * 60s pour que l'échelle de taille de tomate suive les 180min
-            const MIN_SIZE = 70;    
-            const MAX_SIZE = 200;   
+            const MIN_SIZE = 50;    
+            const MAX_SIZE = 140;   
 
             const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
             const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
