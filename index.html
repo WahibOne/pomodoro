@@ -14,8 +14,8 @@
 
     <style>
         :root {
-            background-color: #1a1e26;
             /* Dégradé normal */
+            background-color: #1a1e26; /* Ajoute cette ligne avant le dégradé */
             --bg-gradient: linear-gradient(to bottom, #1a1e26 0%, #2c3445 100%);
             /* Dégradé Focus : on descend vers des noirs/bleus très profonds */
             --bg-focus-gradient: linear-gradient(to bottom, #0a0c10 0%, #151921 100%);
@@ -139,7 +139,7 @@
     <div id="timer" onclick="openSettings()">25:00</div>
 
     <div id="home-ui">
-        <button id="startBtn" onclick="startFocus()">Start Focus</button>
+        <button id="startBtn" onclick="startFocus()">Start Focus ></button>
     </div>
 
     <div id="settings-overlay">
@@ -435,8 +435,14 @@
             engine.gravity.y = Math.max(-maxGravity, Math.min(maxGravity, y / 30));
         }
 
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+
         function startFocus() {
             document.body.classList.add('is-focusing');
+            
+            // CHANGE LA COULEUR ICI (#0a0c10 correspond à ton --bg-focus-gradient)
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#0a0c10');
+
             if (btnBody) Composite.remove(world, btnBody);
             initGyroscope();
 
@@ -459,6 +465,10 @@
             clearInterval(timerId);
             timerId = null;
             document.body.classList.remove('is-focusing');
+            
+            // REMET LA COULEUR D'ORIGINE (#1a1e26)
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#1a1e26');
+
             if (btnBody) Composite.add(world, btnBody);
 
             spawnTomato(success); 
