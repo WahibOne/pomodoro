@@ -31,12 +31,13 @@
             background-attachment: fixed;
             color: var(--text-color); 
             overflow: hidden; 
-            /* On change 'background-color' par 'background' pour la transition */
-            transition: background 1.2s ease-in-out; 
+            background-color: #1a1e26;
+            transition: background 1.2s ease-in-out, background-color 1.2s ease-in-out;
         }
 
         /* Quand on est en mode focus, on applique le dégradé sombre */
         body.is-focusing {
+            background-color: #0a0c10; /* La couleur cible du mode focus */
             background: var(--bg-focus-gradient);
         }
 
@@ -139,7 +140,7 @@
     <div id="timer" onclick="openSettings()">25:00</div>
 
     <div id="home-ui">
-        <button id="startBtn" onclick="startFocus()">Start Focus ></button>
+        <button id="startBtn" onclick="startFocus()">Start Focus</button>
     </div>
 
     <div id="settings-overlay">
