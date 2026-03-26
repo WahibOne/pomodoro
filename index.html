@@ -124,7 +124,10 @@
     </style>
 </head>
 <body>
-
+    <button onclick="alert('Vibration supportée : ' + !!navigator.vibrate); navigator.vibrate(200);" 
+            style="position:fixed; top:10px; left:10px; z-index:9999; padding:20px; background:white; color:black;">
+        TEST VIBRATION
+    </button>
     <button id="skipBtn" onclick="skipFocus()">Passer ⏭</button>
 
     <div id="timer" onclick="openSettings()">25:00</div>
