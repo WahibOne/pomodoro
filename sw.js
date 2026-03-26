@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pomo-cache-v2.4'; 
+const CACHE_NAME = 'pomo-cache-v2.5'; 
 const urlsToCache = [
   './',
   './index.html',
