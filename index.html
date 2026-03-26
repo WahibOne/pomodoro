@@ -72,26 +72,32 @@
         #preview-tomato-wrapper { height: 120px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 60px; }
         #preview-tomato { width: 50px; height: 50px; transition: width 0.1s, height 0.1s; }
 
-        .dial-container { width: 100%; height: 120px; position: relative; overflow: hidden; cursor: grab; touch-action: none; }
+        .dial-container { width: 100%; height: 180px; position: relative; overflow: hidden; cursor: grab; touch-action: none; }
         .dial-container:active { cursor: grabbing; }
-        .dial-strip { position: absolute; top: 0; left: 0; height: 100%; display: flex; align-items: center; }
+        .dial-strip { position: absolute; top: 30; left: 0; height: 100%; display: flex; align-items: center; }
         
         .tick-mark { position: absolute; width: 2px; background: rgba(255,255,255,0.15); border-radius: 1px; top: 50%; transform: translateY(-50%); }
         .tick-mark.minor { height: 15px; }
         .tick-mark.major { height: 30px; }
         
         .tick-num { 
-            position: absolute; bottom: 45px; left: 50%; transform: translateX(-50%); 
-            font-size: 1.5rem; color: #535865; font-weight: 600; transition: all 0.2s ease;
+            position: absolute; 
+            bottom: 45px; /* Remonté de 45px à 55px */
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-size: 1.5rem; 
+            color: #535865; 
+            font-weight: 600; 
+            transition: all 0.2s ease;
         }
 
         /* Curseur central (Pill + Triangle) */
-        .dial-pointer { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .dial-pointer { position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .dial-pill { width: 6px; height: 40px; background: white; border-radius: 3px; margin-bottom: 12px; }
         .dial-triangle { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 10px solid white; }
 
         #doneBtn { 
-            margin-top: 80px; padding: 18px 50px; font-size: 1.1rem; font-family: inherit; font-weight: bold;
+            margin-top: 60px; padding: 18px 50px; font-size: 1.1rem; font-family: inherit; font-weight: bold;
             background: white; color: black; border: none; border-radius: 30px; cursor: pointer; transition: transform 0.2s;
         }
         #doneBtn:active { transform: scale(0.95); }
@@ -227,8 +233,8 @@
             // Mettre à jour la taille de la tomate de prévisualisation
             let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, currentTime));
             let percent = (clampedTime - MIN_TIME_CAP) / (MAX_TIME_CAP - MIN_TIME_CAP);
-            const MIN_SIZE = 30;
-            const MAX_SIZE = 60;
+            const MIN_SIZE = 50;
+            const MAX_SIZE = 120;
             let size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
             previewTomato.style.width = `${size}px`;
             previewTomato.style.height = `${size}px`;
@@ -275,7 +281,7 @@
             function tick() {
                 // Application de la vélocité et de la friction
                 dialCurrentX += velocityX * 16;
-                velocityX *= 0.92;
+                velocityX *= 0.96;
 
                 // Si la vitesse est très faible, on force le "Snap" (aimant) sur un multiple de 5
                 if (Math.abs(velocityX) < 0.2) {
@@ -285,9 +291,9 @@
                     let targetX = targetTime * PX_PER_MIN;
 
                     // Force de ressort douce vers la cible
-                    dialCurrentX += (targetX - dialCurrentX) * 0.15;
+                    dialCurrentX += (targetX - dialCurrentX) * 0.08;
 
-                    if (Math.abs(targetX - dialCurrentX) < 0.5) {
+                    if (Math.abs(targetX - dialCurrentX) < 0.1) {
                         dialCurrentX = targetX;
                         updateDialVisuals();
                         return; // Arrêt complet
@@ -309,8 +315,16 @@
 
         function closeSettings() {
             document.body.classList.remove('is-setting-time');
-            // Récupère la valeur finale (arrondie)
-            let finalTime = Math.round((dialCurrentX / PX_PER_MIN) / 5) * 5;
+            
+            // 1. On calcule la valeur brute à partir de la position du sélecteur
+            let rawTime = (dialCurrentX / PX_PER_MIN);
+            
+            // 2. On force la valeur à rester entre 5 et 180 (Sécurité)
+            let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, rawTime));
+            
+            // 3. On arrondit au multiple de 5 le plus proche
+            let finalTime = Math.round(clampedTime / 5) * 5;
+            
             TOTAL_TIME = finalTime * 60;
             timeLeft = TOTAL_TIME;
             updateDisplay();
@@ -373,8 +387,8 @@
         function spawnTomato(success) {
             const MIN_TIME = 60;    
             const MAX_TIME = 10800; // 180 min * 60s pour que l'échelle de taille de tomate suive les 180min
-            const MIN_SIZE = 30;    
-            const MAX_SIZE = 60;   
+            const MIN_SIZE = 50;    
+            const MAX_SIZE = 120;   
 
             const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
             const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
@@ -386,7 +400,7 @@
             const x = Math.random() * (worldWidth - size * 2) + size;
             const y = 40; 
 
-            const physicalRadius = size * 0.42; 
+            const physicalRadius = size * 0.45; 
 
             const body = Bodies.circle(x, y, physicalRadius, { restitution: 0.3, friction: 0.2, density: 0.005 });
 
