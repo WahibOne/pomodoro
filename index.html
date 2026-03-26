@@ -207,13 +207,29 @@
         }
         buildDial();
 
+        // --- AJOUT : Variable pour suivre le dernier "tick" de vibration ---
+        let lastVibratedMinute = -1;
+
         function updateDialVisuals() {
             const centerOffset = window.innerWidth / 2;
             dialStrip.style.transform = `translateX(${centerOffset - dialCurrentX}px)`;
 
             let currentTime = dialCurrentX / PX_PER_MIN;
+            
+            // --- AJOUT : Logique de vibration ---
+            // On arrondit pour savoir sur quelle graduation on se trouve
+            let roundedMinute = Math.round(currentTime);
+            
+            // Si on change de graduation et qu'on est dans les limites
+            if (roundedMinute !== lastVibratedMinute && roundedMinute >= MIN_TIME_CAP && roundedMinute <= MAX_TIME_CAP) {
+                // Une vibration de 10ms est très légère, idéale pour un effet de "tick"
+                if (navigator.vibrate) {
+                    navigator.vibrate(10); 
+                }
+                lastVibratedMinute = roundedMinute;
+            }
 
-            // Mettre en évidence le chiffre central
+            // --- Reste de ton code (mise en évidence du chiffre et taille tomate) ---
             const majorTicks = document.querySelectorAll('.tick-mark.major');
             majorTicks.forEach(tick => {
                 const val = parseInt(tick.id.replace('tick-', ''));
@@ -221,7 +237,7 @@
                 const numEl = tick.querySelector('.tick-num');
                 
                 if (dist < 2.5) { 
-                    const scale = 1 + (1 - (dist / 2.5)) * 0.8; // Grossit à l'approche du centre
+                    const scale = 1 + (1 - (dist / 2.5)) * 0.8;
                     numEl.style.transform = `translate(-50%, 0) scale(${scale})`;
                     numEl.style.color = 'white';
                 } else {
@@ -230,11 +246,10 @@
                 }
             });
 
-            // Mettre à jour la taille de la tomate de prévisualisation
             let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, currentTime));
             let percent = (clampedTime - MIN_TIME_CAP) / (MAX_TIME_CAP - MIN_TIME_CAP);
-            const MIN_SIZE = 50;
-            const MAX_SIZE = 120;
+            const MIN_SIZE = 70;
+            const MAX_SIZE = 200;
             let size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
             previewTomato.style.width = `${size}px`;
             previewTomato.style.height = `${size}px`;
@@ -387,8 +402,8 @@
         function spawnTomato(success) {
             const MIN_TIME = 60;    
             const MAX_TIME = 10800; // 180 min * 60s pour que l'échelle de taille de tomate suive les 180min
-            const MIN_SIZE = 50;    
-            const MAX_SIZE = 120;   
+            const MIN_SIZE = 70;    
+            const MAX_SIZE = 200;   
 
             const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
             const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
