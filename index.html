@@ -7,29 +7,37 @@
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/135/135763.png">
-    
+    <link rel="apple-touch-icon" href="tomate_orig.png">    
     <link href="https://fonts.googleapis.com/css2?family=Varela+Round&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <style>
         :root {
-            --bg-color: #1a1e26;
+            /* Dégradé normal */
+            --bg-gradient: linear-gradient(to bottom, #1a1e26 0%, #2c3445 100%);
+            /* Dégradé Focus : on descend vers des noirs/bleus très profonds */
+            --bg-focus-gradient: linear-gradient(to bottom, #0a0c10 0%, #151921 100%);
             --text-color: #ffffff;
             --btn-bg: rgba(255, 255, 255, 0.1);
         }
-        
-        * { user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
 
         body { 
             font-family: 'Varela Round', -apple-system, sans-serif; 
             display: flex; flex-direction: column; align-items: center; justify-content: flex-start; 
             height: 100vh; margin: 0; padding-top: 15vh;
-            background-color: var(--bg-color); color: var(--text-color); 
-            overflow: hidden; transition: background-color 0.8s ease;
+            background: var(--bg-gradient); 
+            background-attachment: fixed;
+            color: var(--text-color); 
+            overflow: hidden; 
+            /* On change 'background-color' par 'background' pour la transition */
+            transition: background 1.2s ease-in-out; 
         }
 
-        /* --- ÉCRAN PRINCIPAL --- */
+        /* Quand on est en mode focus, on applique le dégradé sombre */
+        body.is-focusing {
+            background: var(--bg-focus-gradient);
+        }
+
         #timer { 
             font-size: 7.5rem; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -2px;
             cursor: pointer; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1); z-index: 10;
@@ -45,7 +53,7 @@
         body.is-focusing #home-ui { opacity: 0; pointer-events: none; }
 
         #startBtn { 
-            padding: 18px 45px; font-size: 1.3rem; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; border-radius: 40px; 
+            padding: 18px 20px; font-size: 1.3rem; border: 1px solid rgba(255,255,255,0.2); font-family: inherit; border-radius: 40px; 
             background: var(--btn-bg); color: var(--text-color); cursor: pointer; font-weight: 500;
             backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: all 0.2s;
         }
@@ -61,9 +69,10 @@
         #skipBtn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
         body.is-focusing #skipBtn { opacity: 1; pointer-events: auto; }
 
-        /* --- ÉCRAN DE PARAMÉTRAGE DU TEMPS --- */
         #settings-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            /* Remplacement de background-color par le dégradé */
+            background: var(--bg-gradient);
             z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
         }
@@ -82,7 +91,7 @@
         
         .tick-num { 
             position: absolute; 
-            bottom: 45px; /* Remonté de 45px à 55px */
+            bottom: 45px; 
             left: 50%; 
             transform: translateX(-50%); 
             font-size: 1.5rem; 
@@ -91,7 +100,6 @@
             transition: all 0.2s ease;
         }
 
-        /* Curseur central (Pill + Triangle) */
         .dial-pointer { position: absolute; left: 50%; top: 60%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .dial-pill { width: 6px; height: 40px; background: white; border-radius: 3px; margin-bottom: 12px; }
         .dial-triangle { width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 10px solid white; }
@@ -102,7 +110,6 @@
         }
         #doneBtn:active { transform: scale(0.95); }
 
-        /* --- MOTEUR PHYSIQUE --- */
         #world-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
         .tomato-inner { width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s; }
         .tomato-inner.popping { transform: scale(0); opacity: 0; }
@@ -134,16 +141,9 @@
     </div>
 
     <div id="settings-overlay">
-        
         <div id="preview-tomato-wrapper">
             <div id="preview-tomato">
-                <svg viewBox="0 0 50 50" width="100%" height="100%">
-                    <ellipse cx="25" cy="27" rx="22" ry="19" fill="#f58d4a" />
-                    <path d="M 25 3 L 28 8 L 34 7 L 29 12 L 32 18 L 25 14 L 18 18 L 21 12 L 16 7 L 22 8 Z" fill="#5da349" />
-                    <circle cx="16" cy="27" r="1.5" fill="#2c2c2c"/>
-                    <circle cx="28" cy="27" r="1.5" fill="#2c2c2c"/>
-                    <path d="M20,31 Q22,34 24,31" stroke="#2c2c2c" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-                </svg>
+                <img src="tomate_orig.png" alt="Tomate" style="width: 100%; height: 100%; object-fit: contain;">
             </div>
         </div>
 
@@ -178,19 +178,16 @@
             timerDisplay.textContent = `${m}:${s}`;
         }
 
-        // --- GESTION DU NOUVEAU SÉLECTEUR (DIAL) ---
-        const PX_PER_MIN = 20; // Espacement de 20px par minute
+        const PX_PER_MIN = 20; 
         const MIN_TIME_CAP = 5;
-        const MAX_TIME_CAP = 180; // Changé à 180 minutes
-        let dialCurrentX = 25 * PX_PER_MIN; // Valeur par défaut au démarrage
+        const MAX_TIME_CAP = 180; 
+        let dialCurrentX = 25 * PX_PER_MIN; 
         
         const dialStrip = document.getElementById('dial-strip');
         const previewTomato = document.getElementById('preview-tomato');
 
-        // Générer les graduations
         function buildDial() {
             let html = '';
-            // On génère de 0 à 200 pour avoir de la marge sur les bords (pour les 180min)
             for(let i = 0; i <= 200; i++) {
                 const posX = i * PX_PER_MIN;
                 if(i >= MIN_TIME_CAP && i <= MAX_TIME_CAP) {
@@ -212,8 +209,6 @@
             dialStrip.style.transform = `translateX(${centerOffset - dialCurrentX}px)`;
 
             let currentTime = dialCurrentX / PX_PER_MIN;
-
-            // Mettre en évidence le chiffre central
             const majorTicks = document.querySelectorAll('.tick-mark.major');
             majorTicks.forEach(tick => {
                 const val = parseInt(tick.id.replace('tick-', ''));
@@ -221,7 +216,7 @@
                 const numEl = tick.querySelector('.tick-num');
                 
                 if (dist < 2.5) { 
-                    const scale = 1 + (1 - (dist / 2.5)) * 0.8; // Grossit à l'approche du centre
+                    const scale = 1 + (1 - (dist / 2.5)) * 0.8; 
                     numEl.style.transform = `translate(-50%, 0) scale(${scale})`;
                     numEl.style.color = 'white';
                 } else {
@@ -230,7 +225,6 @@
                 }
             });
 
-            // Mettre à jour la taille de la tomate de prévisualisation
             let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, currentTime));
             let percent = (clampedTime - MIN_TIME_CAP) / (MAX_TIME_CAP - MIN_TIME_CAP);
             const MIN_SIZE = 50;
@@ -240,7 +234,6 @@
             previewTomato.style.height = `${size}px`;
         }
 
-        // Logique de Drag et d'Inertie
         const dialContainer = document.getElementById('dial-container');
         let isDraggingDial = false;
         let lastClientX = 0;
@@ -261,11 +254,9 @@
             if (!isDraggingDial) return;
             const now = performance.now();
             const dt = Math.max(1, now - lastTime);
-            const deltaX = lastClientX - e.clientX; // Inversé pour le scroll naturel
-            
+            const deltaX = lastClientX - e.clientX; 
             dialCurrentX += deltaX;
             velocityX = deltaX / dt;
-            
             lastClientX = e.clientX;
             lastTime = now;
             updateDialVisuals();
@@ -279,24 +270,19 @@
 
         function startInertia() {
             function tick() {
-                // Application de la vélocité et de la friction
                 dialCurrentX += velocityX * 16;
                 velocityX *= 0.96;
 
-                // Si la vitesse est très faible, on force le "Snap" (aimant) sur un multiple de 5
                 if (Math.abs(velocityX) < 0.2) {
                     let currentTime = dialCurrentX / PX_PER_MIN;
-                    // Arrondir au multiple de 5 le plus proche (limité entre MIN_TIME_CAP et MAX_TIME_CAP)
                     let targetTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, Math.round(currentTime / 5) * 5));
                     let targetX = targetTime * PX_PER_MIN;
-
-                    // Force de ressort douce vers la cible
                     dialCurrentX += (targetX - dialCurrentX) * 0.08;
 
                     if (Math.abs(targetX - dialCurrentX) < 0.1) {
                         dialCurrentX = targetX;
                         updateDialVisuals();
-                        return; // Arrêt complet
+                        return; 
                     }
                 }
                 updateDialVisuals();
@@ -305,34 +291,24 @@
             animFrame = requestAnimationFrame(tick);
         }
 
-        // Ouvrir / Fermer les paramètres
         function openSettings() {
             document.body.classList.add('is-setting-time');
-            // Synchronise la position de la règle avec le temps actuel
             dialCurrentX = (TOTAL_TIME / 60) * PX_PER_MIN;
             updateDialVisuals();
         }
 
         function closeSettings() {
             document.body.classList.remove('is-setting-time');
-            
-            // 1. On calcule la valeur brute à partir de la position du sélecteur
             let rawTime = (dialCurrentX / PX_PER_MIN);
-            
-            // 2. On force la valeur à rester entre 5 et 180 (Sécurité)
             let clampedTime = Math.max(MIN_TIME_CAP, Math.min(MAX_TIME_CAP, rawTime));
-            
-            // 3. On arrondit au multiple de 5 le plus proche
             let finalTime = Math.round(clampedTime / 5) * 5;
-            
             TOTAL_TIME = finalTime * 60;
             timeLeft = TOTAL_TIME;
             updateDisplay();
         }
 
-
         // --- MOTEUR PHYSIQUE MATTER.JS ---
-        const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+        const { Engine, Runner, Bodies, Composite, Events } = Matter;
         const engine = Engine.create({ gravity: { x: 0, y: 1.5 } }); 
         const world = engine.world;
         const runner = Runner.create();
@@ -358,7 +334,7 @@
                 rect.top + rect.height / 2, 
                 rect.width + 20, 
                 rect.height + 20, 
-                { isStatic: true, render: { visible: false }, isSensor: false }
+                { isStatic: true, isSensor: false }
             );
             Composite.add(world, btnBody);
         }, 100);
@@ -367,57 +343,53 @@
 
         let tomatoBodies = [];
 
-        const COLOR_ORANGE = '#f58d4a';
-        const COLOR_YELLOW = '#fbe064';
-        const COLOR_LEAF = '#5da349';
-        const COLOR_FACE = '#2c2c2c';
-
-        // Visages décalés vers la gauche (cx-3 et x-3 pour les tracés)
-        const happyFace = `
-            <circle cx="16" cy="27" r="1.5" fill="${COLOR_FACE}"/>
-            <circle cx="28" cy="27" r="1.5" fill="${COLOR_FACE}"/>
-            <path d="M20,31 Q22,36 24,31" stroke="${COLOR_FACE}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        `;
-        const sadFace = `
-            <circle cx="16" cy="27" r="1.5" fill="${COLOR_FACE}"/>
-            <circle cx="28" cy="27" r="1.5" fill="${COLOR_FACE}"/>
-            <path d="M20,34 Q22,30 24,33" stroke="${COLOR_FACE}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-        `;
-
         function spawnTomato(success) {
             const MIN_TIME = 60;    
-            const MAX_TIME = 10800; // 180 min * 60s pour que l'échelle de taille de tomate suive les 180min
+            const MAX_TIME = 10800; 
             const MIN_SIZE = 50;    
             const MAX_SIZE = 140;   
 
             const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
             const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
-            const size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
+            
+            // Taille de base calculée
+            let size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
 
-            const color = success ? COLOR_ORANGE : COLOR_YELLOW;
-            const face = success ? happyFace : sadFace;
+            // --- AJUSTEMENT VISUEL ---
+            // Si la tomate triste paraît trop grande, on réduit sa taille de 10% 
+            // par rapport à la tomate normale pour compenser son volume visuel.
+            if (!success) {
+                size = size * 0.92; 
+            }
 
             const x = Math.random() * (worldWidth - size * 2) + size;
             const y = 40; 
+            
+            // Le rayon physique doit être un peu plus petit que la moitié de la div 
+            // pour que les tomates ne flottent pas (à cause des feuilles/tiges)
+            const physicalRadius = size * 0.42; 
 
-            const physicalRadius = size * 0.45; 
-
-            const body = Bodies.circle(x, y, physicalRadius, { restitution: 0.3, friction: 0.2, density: 0.005 });
+            const body = Bodies.circle(x, y, physicalRadius, { 
+                restitution: 0.4, 
+                friction: 0.1, 
+                density: 0.005 
+            });
 
             const div = document.createElement('div');
             div.style.position = 'absolute';
-            div.style.width = `${size}px`; div.style.height = `${size}px`;
-            div.style.marginLeft = `-${size / 2}px`; div.style.marginTop = `-${size / 2}px`;
+            div.style.width = `${size}px`; 
+            div.style.height = `${size}px`;
+            div.style.marginLeft = `-${size / 2}px`; 
+            div.style.marginTop = `-${size / 2}px`;
+
+            const imgSrc = success ? 'tomate_orig.png' : 'tomate_orig_sad.png';
 
             div.innerHTML = `
                 <div class="tomato-inner popping">
-                    <svg viewBox="0 0 50 50" width="100%" height="100%">
-                        <ellipse cx="25" cy="27" rx="22" ry="19" fill="${color}" />
-                        <path d="M 25 3 L 28 8 L 34 7 L 29 12 L 32 18 L 25 14 L 18 18 L 21 12 L 16 7 L 22 8 Z" fill="${COLOR_LEAF}" />
-                        ${face}
-                    </svg>
+                    <img src="${imgSrc}" alt="Tomate" style="width: 100%; height: 100%; object-fit: contain; display: block;">
                 </div>
             `;
+            
             container.appendChild(div);
             tomatoBodies.push({ body, element: div });
             Composite.add(world, body);
@@ -477,12 +449,7 @@
             if (timerId) {
                 clearInterval(timerId);
                 timerId = null;
-                document.body.classList.remove('is-focusing');
-                if (btnBody) Composite.add(world, btnBody);
-                
-                spawnTomato(true); 
-                timeLeft = TOTAL_TIME;
-                updateDisplay();
+                endFocus(true);
             }
         }
 
