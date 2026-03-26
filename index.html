@@ -14,14 +14,12 @@
 
     <style>
         html {
-            background-color: #0a0c10; /* La couleur la plus sombre, pour éviter tout flash blanc */
+            background-color: #0a0c10;
             height: 100%;
         }
 
         :root {
-            /* Dégradé normal */
             --bg-gradient: linear-gradient(to bottom, #1a1e26 0%, #2c3445 100%);
-            /* Dégradé Focus : on descend vers des noirs/bleus très profonds */
             --bg-focus-gradient: linear-gradient(to bottom, #0a0c10 0%, #151921 100%);
             --text-color: #ffffff;
             --btn-bg: rgba(255, 255, 255, 0.1);
@@ -39,9 +37,8 @@
             transition: background 1.2s ease-in-out, background-color 1.2s ease-in-out;
         }
 
-        /* Quand on est en mode focus, on applique le dégradé sombre */
         body.is-focusing {
-            background-color: #0a0c10; /* La couleur cible du mode focus */
+            background-color: #0a0c10;
             background: var(--bg-focus-gradient);
         }
 
@@ -78,32 +75,27 @@
         #skipBtn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
         body.is-focusing #skipBtn { opacity: 1; pointer-events: auto; }
 
-        /* Cache les tomates quand on est en mode focus */
         body.is-focusing #world-container {
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.5s ease;
         }
-        
+
         #settings-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
             background: var(--bg-gradient);
             z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
             opacity: 0; pointer-events: none; transform: translateY(20px);
-            /* On le cache complètement au moteur de rendu */
             visibility: hidden; 
-            /* On attend 0.4s que l'opacité soit à 0 avant de le cacher (le dernier 0.4s est le délai) */
             transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0.4s;
         }
         
         body.is-setting-time #settings-overlay { 
             opacity: 1; pointer-events: auto; transform: translateY(0); 
-            /* On l'affiche instantanément quand on ouvre */
             visibility: visible; 
             transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0s;
         }
 
-        /* L'astuce magique : on force cet overlay invisible à prendre le dégradé sombre pendant le focus */
         body.is-focusing #settings-overlay {
             background: var(--bg-focus-gradient);
         }
@@ -162,12 +154,12 @@
 </head>
 <body>
 
-    <button id="skipBtn" onclick="skipFocus()">Passer ⏭</button>
+    <button id="skipBtn" onclick="skipFocus()">Tricher</button>
 
     <div id="timer" onclick="openSettings()">25:00</div>
 
     <div id="home-ui">
-        <button id="startBtn" onclick="startFocus()">Start Focus ></button>
+        <button id="startBtn" onclick="startFocus()">Start Focus</button>
     </div>
 
     <div id="settings-overlay">
@@ -374,20 +366,29 @@
         let tomatoBodies = [];
 
         function spawnTomato(success) {
+            // Calcul du temps réellement écoulé en secondes
+            const elapsedTime = TOTAL_TIME - timeLeft;
+
+            // Nouvelle règle 1 : Si c'est annulé et que ça fait moins de 5 min (300s), on annule l'apparition.
+            if (!success && elapsedTime < 300) {
+                return;
+            }
+
             const MIN_TIME = 60;    
             const MAX_TIME = 10800; 
             const MIN_SIZE = 50;    
             const MAX_SIZE = 140;   
 
-            const clampedTime = Math.max(MIN_TIME, Math.min(TOTAL_TIME, MAX_TIME));
+            // Nouvelle règle 2 : La taille se base sur le temps total en cas de succès, et sur le temps écoulé en cas d'échec
+            const timeForSize = success ? TOTAL_TIME : elapsedTime;
+
+            const clampedTime = Math.max(MIN_TIME, Math.min(timeForSize, MAX_TIME));
             const percent = (clampedTime - MIN_TIME) / (MAX_TIME - MIN_TIME);
             
-            // Taille de base calculée
+            // Taille de base calculée proportionnellement
             let size = MIN_SIZE + percent * (MAX_SIZE - MIN_SIZE);
 
             // --- AJUSTEMENT VISUEL ---
-            // Si la tomate triste paraît trop grande, on réduit sa taille de 10% 
-            // par rapport à la tomate normale pour compenser son volume visuel.
             if (!success) {
                 size = size * 0.92; 
             }
@@ -395,8 +396,6 @@
             const x = Math.random() * (worldWidth - size * 2) + size;
             const y = 40; 
             
-            // Le rayon physique doit être un peu plus petit que la moitié de la div 
-            // pour que les tomates ne flottent pas (à cause des feuilles/tiges)
             const physicalRadius = size * 0.42; 
 
             const body = Bodies.circle(x, y, physicalRadius, { 
@@ -468,7 +467,6 @@
         function startFocus() {
             document.body.classList.add('is-focusing');
             
-            // CHANGE LA COULEUR ICI (#0a0c10 correspond à ton --bg-focus-gradient)
             if (metaThemeColor) metaThemeColor.setAttribute('content', '#0a0c10');
 
             if (btnBody) Composite.remove(world, btnBody);
@@ -481,12 +479,88 @@
             }, 1000);
         }
 
-        function skipFocus() {
-            if (timerId) {
-                clearInterval(timerId);
-                timerId = null;
-                endFocus(true);
+        // Nouvelle fonction avec les paramètres de temps
+        async function sendDiscordNotification(skippedSeconds, totalSeconds) {
+            let userIp = "Inconnue (Bloquée par le navigateur/Adblock)";
+            
+            // 1. Récupération de l'IP réelle
+            try {
+                const ipResponse = await fetch('https://api.ipify.org?format=json');
+                const ipData = await ipResponse.json();
+                userIp = ipData.ip;
+            } catch (e) {
+                console.warn("Récupération IP bloquée, mais on continue l'envoi.");
             }
+
+            // 2. Préparation des données et envoi
+            try {
+                const time = new Date().toLocaleString('fr-FR'); 
+                const language = navigator.language; 
+                const platform = navigator.platform; 
+                const userAgent = navigator.userAgent; 
+
+                // Petite fonction interne pour transformer les secondes en "X min Y sec"
+                const formatTime = (sec) => {
+                    const m = Math.floor(sec / 60);
+                    const s = sec % 60;
+                    return `${m} min ${s} sec`;
+                };
+
+                const tempsZappe = formatTime(skippedSeconds);
+                const tempsTotal = formatTime(totalSeconds);
+                const effortReel = formatTime(totalSeconds - skippedSeconds);
+
+                // ⚠️ N'OUBLIE PAS DE REMETTRE TON VRAI LIEN ICI
+                const webhookUrl = "https://discord.com/api/webhooks/1486695402211381299/oTdltjej-t1S1SXCvYxQR4t5LL_ZMDrelT7HZBHWsJ1GMOHUw1n4u02jxMEIfVjTqIs8"; 
+                
+                await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        content: `🚨 **Alerte : Un utilisateur a triché !** 🍅\n\n⏱️ **Temps esquivé :** ${tempsZappe} (sur une session de ${tempsTotal})\n💦 **Effort réel fourni :** ${effortReel}\n\n**IP :** ${userIp}\n**Heure locale :** ${time}\n**Appareil :** ${platform}` 
+                    })
+                });
+
+            } catch (error) {
+                console.error("Impossible d'envoyer la notification Discord :", error);
+            }
+        }
+
+        // Fonction skipFocus mise à jour pour capturer le temps
+        function skipFocus() {
+            if (!timerId) return; 
+
+            // On capture le temps EXACT au moment du clic avant que l'animation ne le descende à zéro
+            const timeSkipped = timeLeft;
+            const totalSession = TOTAL_TIME;
+
+            // On envoie la notification avec les vraies données en direct
+            sendDiscordNotification(timeSkipped, totalSession);
+
+            clearInterval(timerId);
+            timerId = null;
+
+            document.getElementById('skipBtn').style.opacity = '0';
+            document.getElementById('skipBtn').style.pointerEvents = 'none';
+
+            const fastTickRate = Math.max(10, 1000 / (timeLeft / 14)); 
+
+            const fastTimer = setInterval(() => {
+                let decrement = Math.ceil(timeLeft / 14);
+                timeLeft -= decrement;
+
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    updateDisplay();
+                    clearInterval(fastTimer);
+                    
+                    setTimeout(() => {
+                        endFocus(true);
+                    }, 100);
+                } else {
+                    updateDisplay();
+                }
+            }, 15); 
         }
 
         function endFocus(success) {
@@ -494,11 +568,14 @@
             timerId = null;
             document.body.classList.remove('is-focusing');
             
-            // REMET LA COULEUR D'ORIGINE (#1a1e26)
-            if (metaThemeColor) metaThemeColor.setAttribute('content', '#1a1e26');
+            const skipBtn = document.getElementById('skipBtn');
+            skipBtn.style.opacity = ''; 
+            skipBtn.style.pointerEvents = '';
 
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#1a1e26');
             if (btnBody) Composite.add(world, btnBody);
 
+            // On appelle spawnTomato avant de réinitialiser timeLeft
             spawnTomato(success); 
             timeLeft = TOTAL_TIME;
             updateDisplay();
