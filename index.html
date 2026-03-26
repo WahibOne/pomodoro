@@ -46,8 +46,8 @@
         }
 
         #timer { 
-            font-size: 7.5rem; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -2px;
-            cursor: pointer; transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1); z-index: 10;
+            font-size: 7.5rem; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: -2px;
+            cursor: pointer; transition: transform 2.0s cubic-bezier(0.25, 1, 0.5, 1); z-index: 10;
         }
         #timer:active { transform: scale(0.95); opacity: 0.8; }
         
@@ -55,7 +55,7 @@
 
         #home-ui {
             display: flex; flex-direction: column; align-items: center;
-            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; top: 38vh; z-index: 9;
+            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; bottom: 15vh; z-index: 9;
         }
         body.is-focusing #home-ui { opacity: 0; pointer-events: none; }
 
@@ -78,14 +78,35 @@
         #skipBtn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
         body.is-focusing #skipBtn { opacity: 1; pointer-events: auto; }
 
+        /* Cache les tomates quand on est en mode focus */
+        body.is-focusing #world-container {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
         #settings-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            /* Remplacement de background-color par le dégradé */
             background: var(--bg-gradient);
             z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0; pointer-events: none; transform: translateY(20px);
+            /* On le cache complètement au moteur de rendu */
+            visibility: hidden; 
+            /* On attend 0.4s que l'opacité soit à 0 avant de le cacher (le dernier 0.4s est le délai) */
+            transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0.4s;
         }
-        body.is-setting-time #settings-overlay { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        
+        body.is-setting-time #settings-overlay { 
+            opacity: 1; pointer-events: auto; transform: translateY(0); 
+            /* On l'affiche instantanément quand on ouvre */
+            visibility: visible; 
+            transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s 0s;
+        }
+
+        /* L'astuce magique : on force cet overlay invisible à prendre le dégradé sombre pendant le focus */
+        body.is-focusing #settings-overlay {
+            background: var(--bg-focus-gradient);
+        }
 
         #preview-tomato-wrapper { height: 120px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 60px; }
         #preview-tomato { width: 50px; height: 50px; transition: width 0.1s, height 0.1s; }
@@ -141,12 +162,12 @@
 </head>
 <body>
 
-    <button id="skipBtn" onclick="skipFocus()">Passer >></button>
+    <button id="skipBtn" onclick="skipFocus()">Passer ⏭</button>
 
     <div id="timer" onclick="openSettings()">25:00</div>
 
     <div id="home-ui">
-        <button id="startBtn" onclick="startFocus()">Start Focus ></button>
+        <button id="startBtn" onclick="startFocus()">Start Focus</button>
     </div>
 
     <div id="settings-overlay">
