@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Mon Pomo</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,6 +13,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 
     <style>
+        html {
+            background-color: #0a0c10; /* La couleur la plus sombre, pour éviter tout flash blanc */
+            height: 100%;
+        }
+
         :root {
             /* Dégradé normal */
             --bg-gradient: linear-gradient(to bottom, #1a1e26 0%, #2c3445 100%);
@@ -443,7 +448,7 @@
             document.body.classList.add('is-focusing');
             
             // CHANGE LA COULEUR ICI (#0a0c10 correspond à ton --bg-focus-gradient)
-            //if (metaThemeColor) metaThemeColor.setAttribute('content', '#0a0c10');
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#0a0c10');
 
             if (btnBody) Composite.remove(world, btnBody);
             initGyroscope();
@@ -469,7 +474,7 @@
             document.body.classList.remove('is-focusing');
             
             // REMET LA COULEUR D'ORIGINE (#1a1e26)
-            //if (metaThemeColor) metaThemeColor.setAttribute('content', '#1a1e26');
+            if (metaThemeColor) metaThemeColor.setAttribute('content', '#1a1e26');
 
             if (btnBody) Composite.add(world, btnBody);
 
