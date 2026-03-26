@@ -111,12 +111,13 @@
         const worldWidth = window.innerWidth;
         const worldHeight = window.innerHeight;
 
-        // Murs invisibles
+        // Murs invisibles (Sol, Gauche, Droite, Plafond)
         const wallOptions = { isStatic: true, render: { visible: false } };
         Composite.add(world, [
-            Bodies.rectangle(worldWidth/2, worldHeight + 25, worldWidth, 50, wallOptions),
-            Bodies.rectangle(-25, worldHeight/2, 50, worldHeight, wallOptions),
-            Bodies.rectangle(worldWidth + 25, worldHeight/2, 50, worldHeight, wallOptions)
+            Bodies.rectangle(worldWidth/2, worldHeight + 25, worldWidth, 50, wallOptions), // Sol
+            Bodies.rectangle(-25, worldHeight/2, 50, worldHeight, wallOptions), // Gauche
+            Bodies.rectangle(worldWidth + 25, worldHeight/2, 50, worldHeight, wallOptions), // Droite
+            Bodies.rectangle(worldWidth/2, -25, worldWidth, 50, wallOptions) // Plafond
         ]);
 
         // Bouton Obstacle (Mise à jour plus précise de la position)
@@ -197,6 +198,41 @@
             });
         });
 
+        // --- GESTION DU GYROSCOPE ---
+        let gyroActive = false;
+
+        function initGyroscope() {
+            if (gyroActive) return; // Évite de demander plusieurs fois
+
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission()
+                    .then(permissionState => {
+                        if (permissionState === 'granted') {
+                            window.addEventListener('deviceorientation', handleOrientation);
+                            gyroActive = true;
+                        }
+                    })
+                    .catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+                gyroActive = true;
+            }
+        }
+
+        function handleOrientation(event) {
+            let x = event.gamma; // Inclinaison gauche/droite
+            let y = event.beta;  // Inclinaison avant/arrière
+
+            if (x === null || y === null) return;
+
+            const maxGravity = 1.5;
+            let gravityX = x / 30; 
+            let gravityY = y / 30;
+
+            engine.gravity.x = Math.max(-maxGravity, Math.min(maxGravity, gravityX));
+            engine.gravity.y = Math.max(-maxGravity, Math.min(maxGravity, gravityY));
+        }
+
         // --- GESTION DU MINUTEUR ---
         function updateDisplay() {
             const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
@@ -207,6 +243,9 @@
         function startFocus() {
             document.body.classList.add('is-focusing');
             if (btnBody) Composite.remove(world, btnBody);
+
+            // Initialiser le gyroscope au moment du clic
+            initGyroscope();
 
             timerId = setInterval(() => {
                 timeLeft--;
