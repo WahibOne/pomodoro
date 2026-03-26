@@ -370,7 +370,7 @@
             const elapsedTime = TOTAL_TIME - timeLeft;
 
             // Nouvelle règle 1 : Si c'est annulé et que ça fait moins de 5 min (300s), on annule l'apparition.
-            if (!success && elapsedTime < 300) {
+            if (!success && elapsedTime < 30) {
                 return;
             }
 
