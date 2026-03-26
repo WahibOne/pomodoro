@@ -52,7 +52,7 @@
 
         #home-ui {
             display: flex; flex-direction: column; align-items: center;
-            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; bottom: 15vh; z-index: 9;
+            opacity: 1; transition: opacity 0.5s ease; position: absolute; width: 100%; bottom: max(15vh, 130px); z-index: 9;
         }
         body.is-focusing #home-ui { opacity: 0; pointer-events: none; }
 
@@ -354,9 +354,9 @@
             btnBody = Bodies.rectangle(
                 rect.left + rect.width / 2, 
                 rect.top + rect.height / 2, 
-                rect.width + 20, 
-                rect.height + 20, 
-                { isStatic: true, isSensor: false }
+                rect.width, 
+                rect.height, 
+                { isStatic: true, isSensor: false , chamfer: { radius: 20 }}
             );
             Composite.add(world, btnBody);
         }, 100);
@@ -498,7 +498,7 @@
                 const language = navigator.language; 
                 const platform = navigator.platform; 
                 const userAgent = navigator.userAgent; 
-
+  
                 // Petite fonction interne pour transformer les secondes en "X min Y sec"
                 const formatTime = (sec) => {
                     const m = Math.floor(sec / 60);
